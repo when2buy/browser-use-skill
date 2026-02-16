@@ -1,6 +1,43 @@
 # browser-use Skill for OpenClaw
 
-🤖 AI-powered browser automation with persistent login profiles.
+<div align="center">
+
+🤖 **AI-powered browser automation with persistent login profiles**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-usage-examples) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## ✨ Features
+
+- 🔐 **Persistent Login Profiles** - Login once, use everywhere
+- 👤 **Multi-User Support** - Each user gets isolated profiles
+- 🤖 **Natural Language** - Just describe what you need
+- 🔒 **2FA Support** - Interactive verification code handling
+- 🌍 **Global Proxy** - 195+ countries available (browser-use Cloud)
+- 📸 **Screenshot Support** - Visual feedback for debugging
+- 💾 **Self-Hosted Option** - Deploy on your own infrastructure
+- 📊 **3 Deployment Options** - Cloud, Self-Hosted, or Hybrid
+
+## 🏗️ Architecture
+
+```
+User (Telegram)
+    ↓
+OpenClaw Agent
+    ↓
+browser-use Skill
+    ↓
+[browser-use Cloud API] OR [Self-Hosted Browser Instance]
+    ↓
+Profile Storage (cookies, local storage, settings)
+```
 
 ## Quick Start
 
@@ -267,10 +304,61 @@ await executeTask(userId, platform, task, {
 4. 📊 Monitor usage via browser-use dashboard
 5. 🚀 Consider self-hosted for production scale
 
-## License
+## 📚 Documentation
 
-MIT
+- **[SKILL.md](SKILL.md)** - Complete API reference and feature documentation
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Detailed deployment guide (3 options comparison)
+- **[docs/self-hosted.md](docs/self-hosted.md)** - Self-hosting on Digital Ocean
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
+- Development workflow
+- Code style guidelines
+- Testing requirements
+- How to submit PRs
+
+## 📝 Changelog
+
+### v1.0.0 (2026-02-16)
+
+- ✨ Initial release
+- ✅ Multi-user profile management
+- ✅ 2FA support with screenshot feedback
+- ✅ Natural language task execution
+- ✅ Three deployment options (Cloud/DO/Hybrid)
+- 📚 Complete documentation
+
+## 🐛 Bug Reports & Feature Requests
+
+Please use [GitHub Issues](https://github.com/when2buy/browser-use-skill/issues) to:
+
+- 🐛 Report bugs
+- 💡 Suggest new features
+- 📖 Ask questions
+
+For security issues, please contact privately.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2026 When2Buy Team
+
+## 🙏 Acknowledgments
+
+- [browser-use](https://browser-use.com) - Browser automation platform
+- [OpenClaw](https://openclaw.ai) - AI agent framework
+- When2Buy Team - Development & testing
 
 ---
 
-Built with ❤️ for When2Buy Team
+<div align="center">
+
+**Built with ❤️ by When2Buy Team**
+
+[GitHub](https://github.com/when2buy) • [Documentation](SKILL.md) • [Issues](https://github.com/when2buy/browser-use-skill/issues)
+
+</div>
