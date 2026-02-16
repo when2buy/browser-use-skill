@@ -1,0 +1,22 @@
+{
+  "name": "openclaw-browser-use-skill",
+  "version": "1.0.0",
+  "description": "AI-powered browser automation with persistent profiles for OpenClaw",
+  "main": "index.js",
+  "scripts": {
+    "test": "node scripts/test-login.js",
+    "list-profiles": "node scripts/list-profiles.js",
+    "refresh": "node scripts/refresh-profiles.js"
+  },
+  "keywords": [
+    "openclaw",
+    "browser-automation",
+    "ai",
+    "browser-use"
+  ],
+  "author": "When2Buy Team",
+  "license": "MIT",
+  "dependencies": {
+    "browser-use-sdk": "^1.0.0"
+  }
+}
