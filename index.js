@@ -3,7 +3,7 @@
  * AI-powered browser automation with persistent profiles
  */
 
-const { BrowserUseClient } = require('browser-use-sdk');
+const { BrowserUse } = require('browser-use-sdk');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -24,7 +24,7 @@ function getClient() {
       throw new Error('BROWSER_USE_API_KEY not configured. Add to openclaw.json or env.');
     }
     
-    client = new BrowserUseClient({ apiKey });
+    client = new BrowserUse({ apiKey });
   }
   return client;
 }
@@ -73,7 +73,7 @@ async function getOrCreateProfile(userId, platform) {
   }
   
   // Create new profile
-  const profile = await client.profiles.createProfile({
+  const profile = await client.browserProfiles.create({
     name: `User_${userId}_${platform}`
   });
   
@@ -103,20 +103,11 @@ async function executeTask(userId, platform, task, options = {}) {
   // Get or create profile
   const { profileId, isNew } = await getOrCreateProfile(userId, platform);
   
-  // Create session with profile
-  const session = await client.sessions.createSession({
-    profileId,
-    proxyLocation: options.proxyLocation || 'SG',
-    screenWidth: options.screenWidth || 1920,
-    screenHeight: options.screenHeight || 1080
-  });
-  
   try {
     // If new profile, need initial login
     if (isNew) {
       return {
         needsAuth: true,
-        sessionId: session.id,
         profileId,
         message: `🔐 First time logging into ${platform}. Please provide:\n\n` +
                  `1. Email/Username\n2. Password\n\n` +
@@ -124,94 +115,85 @@ async function executeTask(userId, platform, task, options = {}) {
       };
     }
     
-    // Execute task
-    const taskObj = await client.tasks.createTask({
-      sessionId: session.id,
-      llm: options.model || 'browser-use-llm',
+    // Execute task with profile (tasks.run handles session automatically)
+    const result = await client.tasks.run({
       task,
-      timeout: options.timeout || 60000
+      browserProfileId: profileId,
+      // Optional parameters
+      ...(options.model && { llm: options.model }),
+      ...(options.timeout && { maxDurationSeconds: Math.floor(options.timeout / 1000) })
     });
-    
-    // Wait for completion
-    const result = await taskObj.complete();
-    
-    // Stop session
-    await client.sessions.stopSession(session.id);
     
     return {
       success: true,
-      result: result.result,
-      screenshots: result.screenshots || [],
-      executionTime: result.executionTimeMs
+      result: result.output,
+      taskId: result.id,
+      executionTime: result.durationMs
     };
     
   } catch (err) {
-    // Clean up session on error
-    try {
-      await client.sessions.stopSession(session.id);
-    } catch (cleanupErr) {
-      console.error('Session cleanup failed:', cleanupErr);
-    }
-    
     throw err;
   }
 }
 
 /**
  * Handle interactive login with 2FA support
- * @param {string} sessionId - Active session ID
+ * @param {string} profileId - Browser profile ID
  * @param {object} credentials - { email, password }
- * @param {function} onScreenshot - Callback for 2FA screenshots
+ * @param {string} loginUrl - URL to login page
+ * @param {function} onScreenshot - Callback for 2FA screenshots (optional)
  */
-async function handleInteractiveLogin(sessionId, credentials, onScreenshot) {
+async function handleInteractiveLogin(profileId, credentials, loginUrl, onScreenshot) {
   const client = getClient();
   
   // Create login task with credentials
-  const loginTask = await client.tasks.createTask({
-    sessionId,
-    llm: 'browser-use-llm',
-    task: 'Log into the website',
-    inputFiles: [{
-      name: 'credentials.json',
-      content: JSON.stringify(credentials)
-    }]
+  const task = await client.tasks.create({
+    task: `Navigate to ${loginUrl} and log in with provided credentials`,
+    browserProfileId: profileId,
+    parameters: {
+      email: credentials.email,
+      password: credentials.password
+    }
   });
   
-  // Monitor task progress
-  let status = await client.tasks.getTask(loginTask.id);
-  
-  while (status.status === 'running') {
-    await sleep(2000);
-    status = await client.tasks.getTask(loginTask.id);
+  // If 2FA callback provided, monitor task with streaming
+  if (onScreenshot) {
+    const stream = client.tasks.stream({ taskId: task.id });
     
-    // Check if 2FA/verification needed
-    const currentStep = status.currentStep?.toLowerCase() || '';
-    if (currentStep.includes('verification') || 
-        currentStep.includes('2fa') ||
-        currentStep.includes('code')) {
-      
-      // Get screenshot
-      const screenshot = await client.sessions.getScreenshot(sessionId);
-      
-      // Send to user via callback
-      const verificationCode = await onScreenshot(screenshot, currentStep);
-      
-      // Submit code
-      await client.tasks.createTask({
-        sessionId,
-        llm: 'browser-use-llm',
-        task: `Enter verification code: ${verificationCode}`
-      });
+    for await (const msg of stream) {
+      if (msg.status === 'running') {
+        // Check if need verification
+        const step = msg.step?.description?.toLowerCase() || '';
+        if (step.includes('verification') || step.includes('2fa') || step.includes('code')) {
+          // Note: Screenshot retrieval may need different API endpoint
+          const verificationCode = await onScreenshot(null, step);
+          
+          // Update task with verification code
+          await client.tasks.update(task.id, {
+            parameters: { verificationCode }
+          });
+        }
+      } else if (msg.status === 'finished') {
+        return {
+          success: true,
+          message: '✅ Login successful! Profile saved.'
+        };
+      } else if (msg.status === 'failed') {
+        throw new Error(`Login failed: ${msg.error || 'Unknown error'}`);
+      }
     }
-  }
-  
-  if (status.status === 'completed') {
-    return {
-      success: true,
-      message: '✅ Login successful! Profile saved.'
-    };
   } else {
-    throw new Error(`Login failed: ${status.error || 'Unknown error'}`);
+    // Wait for task completion without streaming
+    const result = await client.tasks.retrieve(task.id);
+    
+    if (result.status === 'finished') {
+      return {
+        success: true,
+        message: '✅ Login successful! Profile saved.'
+      };
+    } else {
+      throw new Error(`Login failed: ${result.error || 'Unknown error'}`);
+    }
   }
 }
 
@@ -228,12 +210,13 @@ async function listUserProfiles(userId) {
   
   for (const [platform, profileId] of Object.entries(userProfiles)) {
     try {
-      const profile = await client.profiles.getProfile(profileId);
+      const profile = await client.browserProfiles.retrieve(profileId);
       details.push({
         platform,
         profileId,
-        lastUsed: profile.lastUsedAt,
-        cookieDomains: profile.cookieDomains
+        name: profile.name,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt
       });
     } catch (err) {
       details.push({
@@ -263,7 +246,7 @@ async function deleteProfile(userId, platform) {
   const client = getClient();
   
   // Delete from browser-use cloud
-  await client.profiles.deleteProfile(profileId);
+  await client.browserProfiles.delete(profileId);
   
   // Remove from local mapping
   delete profiles[userId][platform];
@@ -289,20 +272,16 @@ async function refreshStaleProfiles() {
   for (const [userId, userProfiles] of Object.entries(profiles)) {
     for (const [platform, profileId] of Object.entries(userProfiles)) {
       try {
-        const profile = await client.profiles.getProfile(profileId);
-        const daysSinceUsed = (Date.now() - new Date(profile.lastUsedAt)) / (1000 * 60 * 60 * 24);
+        const profile = await client.browserProfiles.retrieve(profileId);
+        const daysSinceUsed = (Date.now() - new Date(profile.updatedAt)) / (1000 * 60 * 60 * 24);
         
         if (daysSinceUsed > 7) {
-          // Refresh by opening homepage
-          const session = await client.sessions.createSession({ profileId });
-          
-          await client.tasks.createTask({
-            sessionId: session.id,
-            llm: 'browser-use-llm',
-            task: 'Navigate to homepage to refresh session'
+          // Refresh by running a simple task
+          await client.tasks.run({
+            task: 'Navigate to google.com to refresh browser session',
+            browserProfileId: profileId,
+            maxDurationSeconds: 30
           });
-          
-          await client.sessions.stopSession(session.id);
           
           refreshed.push({ userId, platform, profileId });
         }

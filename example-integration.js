@@ -54,11 +54,12 @@ async function handleLogin(userId, platform, sendMessage, sendPhoto) {
     
     // Handle interactive login with 2FA callback
     const loginResult = await browserUse.handleInteractiveLogin(
-      result.sessionId,
+      result.profileId,
       credentials,
+      `https://${platform}.com/login`, // Login URL
       async (screenshot, step) => {
-        // Send screenshot to user
-        await sendPhoto(screenshot, `🔐 ${step}\n\nPlease reply with the verification code:`);
+        // Send notification to user (screenshot may not be available)
+        await sendMessage(`🔐 ${step}\n\nPlease reply with the verification code:`);
         
         // Wait for user to reply with code
         return await waitForVerificationCode(userId);
