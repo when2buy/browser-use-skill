@@ -8,15 +8,38 @@
     "list-profiles": "node scripts/list-profiles.js",
     "refresh": "node scripts/refresh-profiles.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/when2buy/browser-use-skill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/when2buy/browser-use-skill/issues"
+  },
+  "homepage": "https://github.com/when2buy/browser-use-skill#readme",
   "keywords": [
     "openclaw",
     "browser-automation",
     "ai",
-    "browser-use"
+    "browser-use",
+    "web-scraping",
+    "automation",
+    "selenium",
+    "playwright",
+    "puppeteer",
+    "ai-agent",
+    "telegram-bot"
   ],
-  "author": "When2Buy Team",
+  "author": "When2Buy Team <team@when2buy.com>",
+  "contributors": [
+    "When2Buy CTO <cto@when2buy.com>"
+  ],
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "browser-use-sdk": "^1.0.0"
-  }
+  },
+  "devDependencies": {},
+  "peerDependencies": {}
 }

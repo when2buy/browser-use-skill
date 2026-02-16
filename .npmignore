@@ -1,0 +1,30 @@
+# Development
+.git/
+.github/
+.vscode/
+.idea/
+
+# Tests
+tests/
+coverage/
+.nyc_output/
+
+# Examples
+examples/
+
+# Documentation (keep README.md)
+CONTRIBUTING.md
+DEPLOYMENT.md
+docs/
+
+# Data
+browser-use-data/
+profiles.json
+sessions.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
